@@ -5,10 +5,9 @@ import subprocess
 # Paths
 # -----------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SUBMISSION_DIR = os.path.join(SCRIPT_DIR, "submissions")
+SUBMISSION_DIR = SCRIPT_DIR  # submissions folder itself
 PUBLIC_KEY = os.path.join(os.path.dirname(SCRIPT_DIR), "encryption", "public_key.pem")
 
-# AES key path
 AES_KEY_PATH = os.path.join(SUBMISSION_DIR, "aes_key.hex")
 AES_KEY_ENC_PATH = os.path.join(SUBMISSION_DIR, "aes_key.enc")
 
