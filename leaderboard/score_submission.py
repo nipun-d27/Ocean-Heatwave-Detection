@@ -1,24 +1,30 @@
-import pandas as pd
 import os
-from leaderboard.calculate_scores import compute_scores
+from pathlib import Path
+from leaderboard.calculate_scores import calculate_scores_pair
 
 
 def score():
+    """
+    Score participant submissions and return leaderboard metrics.
+    """
 
-    submissions_dir = "submissions"
-    data_dir = "data"
+    submissions_dir = Path("submissions")
 
-    ideal_path = os.path.join(submissions_dir, "ideal_submission.csv")
-    perturbed_path = os.path.join(submissions_dir, "perturbed_submission.csv")
+    ideal_path = submissions_dir / "ideal_submission.csv"
+    perturbed_path = submissions_dir / "perturbed_submission.csv"
 
-    truth_path = os.path.join(data_dir, "test_labels_hidden.csv")
+    if not ideal_path.exists():
+        raise FileNotFoundError(f"{ideal_path} not found")
 
-    ideal = pd.read_csv(ideal_path)
-    perturbed = pd.read_csv(perturbed_path)
-    truth = pd.read_csv(truth_path)
+    if not perturbed_path.exists():
+        raise FileNotFoundError(f"{perturbed_path} not found")
 
-    scores = compute_scores(ideal, perturbed, truth)
+    scores = calculate_scores_pair(ideal_path, perturbed_path)
 
     print("Scores:", scores)
 
     return scores
+
+
+if __name__ == "__main__":
+    score()
