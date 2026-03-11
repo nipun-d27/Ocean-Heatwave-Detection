@@ -3,12 +3,13 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import os   # add this import if you want the debug line below
 
 # Add repo root to sys.path
 repo_root = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(repo_root))
 
-from leaderboard.calculate_scores import calculate_scores  # adjust import for your structure
+from leaderboard.calculate_scores import calculate_scores
 
 def validate_metadata(submission_path: Path):
     metadata_path = submission_path.parent / "metadata.json"
@@ -30,7 +31,11 @@ def main():
     if args.require_metadata:
         validate_metadata(submission_path)
 
+    # Optional debug (prints to stderr, not affecting JSON)
+    print(f"DEBUG: TEST_LABELS_CSV = {os.environ.get('TEST_LABELS_CSV')}", file=sys.stderr)
+
     scores = calculate_scores(submission_path)
+    # Only JSON to stdout
     print(json.dumps(scores))
 
 if __name__ == "__main__":
