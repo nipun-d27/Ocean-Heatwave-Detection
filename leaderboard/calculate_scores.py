@@ -8,7 +8,7 @@ GROUND_TRUTH = Path(__file__).resolve().parent.parent / "data" / "train.csv"
 
 def calculate_scores(submission_path: Path):
     """
-    Compute F1 score for a single CSV submission and return dict
+    Compute F1 score for a single CSV submission and return as dict
     """
     submission_df = pd.read_csv(submission_path)
     gt_df = pd.read_csv(GROUND_TRUTH)
@@ -31,7 +31,7 @@ def calculate_scores(submission_path: Path):
 
     f1 = f1_score(y_true, y_pred, average="macro")
 
-    # Return as dictionary for score_submission.py
+    # Return as dict for JSON output
     return {"validation_f1_score": f1}
 
 
