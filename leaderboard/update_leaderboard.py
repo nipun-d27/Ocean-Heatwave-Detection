@@ -1,4 +1,5 @@
 # leaderboard/update_leaderboard.py
+
 from pathlib import Path
 import pandas as pd
 import subprocess
@@ -15,6 +16,23 @@ from leaderboard.calculate_scores import calculate_scores
 # Submissions folder and leaderboard CSV
 SUBMISSIONS_DIR = repo_root / "submissions"
 LEADERBOARD_CSV = repo_root / "leaderboard/leaderboard.csv"
+
+
+def ensure_metadata(csv_file, team_name):
+    """Automatically create metadata.json next to CSV if missing."""
+    metadata_file = csv_file.parent / "metadata.json"
+    if not metadata_file.exists():
+        print(f"DEBUG: Creating metadata.json for {csv_file.name}")
+        metadata = {
+            "team_name": team_name,
+            "submission_time": "2026-03-11T20:00:00Z",
+            "description": f"Auto-generated metadata for {csv_file.name}"
+        }
+        with open(metadata_file, "w") as f:
+            json.dump(metadata, f)
+    else:
+        print(f"DEBUG: metadata.json already exists for {csv_file.name}")
+
 
 def get_leaderboard_data():
     leaderboard = []
@@ -53,6 +71,10 @@ def get_leaderboard_data():
         print(f"DEBUG: Decrypting {pert_enc} -> {pert_csv}")
         decrypt_file(pert_enc, pert_csv)
 
+        # Ensure metadata exists
+        ensure_metadata(ideal_csv, team_dir.name)
+        ensure_metadata(pert_csv, team_dir.name)
+
         # Score ideal
         try:
             ideal_scores_json = subprocess.check_output([
@@ -81,14 +103,16 @@ def get_leaderboard_data():
             print(f"Error scoring {pert_csv}: {e}")
             continue
 
+        # Append to leaderboard
         leaderboard.append({
             "team_name": team_dir.name,
-            "validation_f1_ideal": ideal_scores["validation_f1_score"],
-            "validation_f1_perturbed": pert_scores["validation_f1_score"],
-            "robustness_gap": ideal_scores["validation_f1_score"] - pert_scores["validation_f1_score"]
+            "validation_f1_ideal": ideal_scores.get("validation_f1_score", 0),
+            "validation_f1_perturbed": pert_scores.get("validation_f1_score", 0),
+            "robustness_gap": ideal_scores.get("validation_f1_score", 0) - pert_scores.get("validation_f1_score", 0)
         })
 
     return leaderboard
+
 
 def update_leaderboard_csv():
     leaderboard_data = get_leaderboard_data()
@@ -103,6 +127,9 @@ def update_leaderboard_csv():
     df.insert(0, "rank", range(1, len(df) + 1))
     df.to_csv(LEADERBOARD_CSV, index=False)
     print(f"Updated leaderboard at {LEADERBOARD_CSV}")
+    print("DEBUG: Leaderboard data:")
+    print(df.to_dict(orient="records"))
+
 
 if __name__ == "__main__":
     update_leaderboard_csv()
