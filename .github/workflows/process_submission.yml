@@ -55,26 +55,61 @@ jobs:
             echo "ERROR: calculate_scores.py not found!"
           fi
 
-      # 3️⃣ Setup Python
+      # 3️⃣ NEW STEP: Remove duplicate calculate_scores.py from scripts folder
+      - name: Clean up duplicate calculate_scores.py
+        run: |
+          echo "=== CHECKING FOR DUPLICATE CALCULATE_SCORES.PY FILES ==="
+          find . -name "calculate_scores.py" -type f
+          echo ""
+          echo "=== REMOVING OLD VERSION FROM SCRIPTS FOLDER IF IT EXISTS ==="
+          if [ -f "scripts/leaderboard/calculate_scores.py" ]; then
+            echo "Found old file at scripts/leaderboard/calculate_scores.py"
+            echo "Content of old file (first 5 lines):"
+            head -5 scripts/leaderboard/calculate_scores.py
+            echo ""
+            rm scripts/leaderboard/calculate_scores.py
+            echo "✅ Removed old file from scripts/leaderboard/"
+          else
+            echo "✅ No duplicate found in scripts/leaderboard/"
+          fi
+          
+          # Also check for any other locations
+          echo ""
+          echo "=== CHECKING FOR ANY OTHER CALCULATE_SCORES.PY FILES ==="
+          find . -path "./.git" -prune -o -name "calculate_scores.py" -type f -print
+          
+          echo ""
+          echo "=== VERIFYING CORRECT FILE IN LEADERBOARD FOLDER ==="
+          if [ -f "leaderboard/calculate_scores.py" ]; then
+            echo "Correct file at leaderboard/calculate_scores.py:"
+            ls -la leaderboard/calculate_scores.py
+            echo "Line count: $(wc -l < leaderboard/calculate_scores.py)"
+            echo "First 5 lines:"
+            head -5 leaderboard/calculate_scores.py
+          else
+            echo "❌ ERROR: leaderboard/calculate_scores.py not found!"
+          fi
+
+      # 4️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      # 4️⃣ Install dependencies
+      # 5️⃣ Install dependencies
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install --upgrade cryptography
 
-      # 5️⃣ Optional: Verify cryptography
+      # 6️⃣ Optional: Verify cryptography
       - name: Verify cryptography
         run: |
           python -m pip show cryptography
           python -c "from cryptography.hazmat.primitives import serialization, hashes; print('cryptography OK')"
 
-      # 6️⃣ Debug and ensure metadata.json exists
+      # 7️⃣ Debug and ensure metadata.json exists
       - name: Debug and create metadata.json
         run: |
           echo "=== DEBUGGING SUBMISSIONS FOLDER ==="
@@ -113,13 +148,13 @@ jobs:
           echo "=== FINAL SUBMISSIONS STRUCTURE ==="
           find submissions -type f -name "*.json" -o -name "*.csv" -o -name "*.enc" | sort
 
-      # 7️⃣ Debug: list submissions folder
+      # 8️⃣ Debug: list submissions folder
       - name: List submissions folder
         run: |
           echo "DEBUG: Listing submissions folder contents:"
           ls -R submissions || echo "No submissions found"
 
-      # 8️⃣ Run the submission processing script
+      # 9️⃣ Run the submission processing script
       - name: Decrypt, Score, and Update Leaderboard
         env:
           SUBMISSION_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
@@ -128,7 +163,7 @@ jobs:
           echo "Decrypting and scoring submissions..."
           python .github/scripts/process_submission.py
 
-      # 9️⃣ Commit and push any changes only for pushes to main
+      # 🔟 Commit and push any changes only for pushes to main
       - name: Commit and Push Changes (Main branch only)
         if: github.event_name == 'push'
         run: |
