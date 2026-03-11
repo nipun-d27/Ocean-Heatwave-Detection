@@ -8,7 +8,7 @@ GROUND_TRUTH = Path(__file__).resolve().parent.parent / "data" / "train.csv"
 
 def calculate_scores(submission_path: Path):
     """
-    Compute F1 score for a single CSV submission
+    Compute F1 score for a single CSV submission and return dict
     """
     submission_df = pd.read_csv(submission_path)
     gt_df = pd.read_csv(GROUND_TRUTH)
@@ -31,15 +31,16 @@ def calculate_scores(submission_path: Path):
 
     f1 = f1_score(y_true, y_pred, average="macro")
 
-    return f1
+    # Return as dictionary for score_submission.py
+    return {"validation_f1_score": f1}
 
 
 def calculate_scores_pair(ideal_path: Path, perturbed_path: Path):
     """
     Compute ideal, perturbed F1 and robustness gap
     """
-    f1_ideal = calculate_scores(ideal_path)
-    f1_pert = calculate_scores(perturbed_path)
+    f1_ideal = calculate_scores(ideal_path)["validation_f1_score"]
+    f1_pert = calculate_scores(perturbed_path)["validation_f1_score"]
     robustness_gap = f1_ideal - f1_pert
     return {
         "validation_f1_ideal": f1_ideal,
