@@ -137,36 +137,50 @@ A smaller robustness gap indicates a more stable and reliable model.
 ```
 gnn-topology-ablation/
 │
-├── README.md
-├── LICENSE
+├── .env.example
 ├── .gitignore
-├── requirements.txt
-├── scoring_script.py              # Computes F1 scores and robustness gap
-├── leaderboard_system.py          # Leaderboard update engine
-├── scores.json                    # Temporary scoring output (auto-generated)
-│
-├── submissions/                   # Participant encrypted submissions (.enc files)
-│
-├── starter_code/                  # Starter implementation for participants
-│
-├── data/                          # Evaluation dataset + references
-│   ├── train.csv                  # Training reference file
-│   ├── test.csv                   # Test reference file
-│   └── TUDataset/
-│       └── MUTAG/
-│
-├── leaderboard/                   # Public leaderboard outputs
-│   ├── leaderboard.md
-│   └── leaderboard_history.csv
-│
-├── keys/                          # Encryption keys
-│   └── public_key.pem             # Organiser RSA public key
+├── LICENSE
+├── README.md
+├── leaderboard.md
 │
 ├── .github/
+│   ├── scripts/
+│   │   └── process_submission.py
 │   └── workflows/
-│       └── score_submission.yml   # Automated scoring pipeline
+│       └── process_submission.yml
 │
-└── readme                         # Additional documentation
+├── data/
+│   └── MUTAG/
+│       ├── test.csv
+│       └── train.csv
+│
+├── docs/
+│   ├── index.html
+│   ├── leaderboard.css
+│   ├── leaderboard.csv
+│   ├── leaderboard.js
+│   └── readme
+│
+├── encryption/
+│   ├── __init__.py
+│   ├── decrypt.py
+│   ├── encrypt.py
+│   ├── generate_keys.py
+│   └── public_key.pem
+│
+├── leaderboard/
+│   ├── __init__.py
+│   ├── calculate_scores.py
+│   ├── hidden_labels_reader.py
+│   ├── render_leaderboard.py
+│   ├── score_submission.py
+│   └── update_leaderboard.py
+│
+├── starter_code/
+│   ├── baseline.py
+│   └── requirements.txt
+│
+└── submissions/
 
 ```
 --------------------
