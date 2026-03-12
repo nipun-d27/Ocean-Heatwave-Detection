@@ -265,7 +265,8 @@ gnn-topology-ablation/
 │   └── requirements.txt
 │
 ├── submissions/                    # Encrypted submissions (git‑tracked)
-│   └── .gitkeep
+│   └──<Team_Name>
+│   └── encrypt_submissions.py      # encrypts the *.CSVs
 │
 ├── .env.example
 ├── .gitignore
@@ -273,6 +274,8 @@ gnn-topology-ablation/
 ├── README.md
 ├── leaderboard.md
 └── requirements.txt
+└── scoring_scripts.py
+└── utils.py
 ```
 
 -----------------------
