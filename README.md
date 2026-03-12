@@ -111,10 +111,10 @@ Only the **best perturbed score** per participant is kept in the leaderboard.
 
 Create a Python virtual environment and install dependencies:
 
-```bash
-
+```
 Starter Code
 A baseline GIN model is provided in starter_code/baseline.py. You can modify it or build your own model. The script:
+```
 
 Loads the MUTAG dataset.
 
