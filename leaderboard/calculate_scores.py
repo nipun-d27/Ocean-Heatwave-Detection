@@ -81,9 +81,9 @@ def calculate_scores(submission_path: Path):
         else:
             raise ValueError(f"Could not find ground truth column. Found: {list(gt_df.columns)}")
     
-    # Merge on graph_index with suffixes to distinguish columns
+    # Merge on graph_index (without forcing suffixes)
     print(f"DEBUG: Merging on graph_index...", file=sys.stderr)
-    merged = submission_df.merge(gt_df, on="graph_index", how="inner", suffixes=('_pred', '_true'))
+    merged = submission_df.merge(gt_df, on="graph_index", how="inner")
     print(f"DEBUG: Merged shape: {merged.shape}", file=sys.stderr)
     print(f"DEBUG: Merged columns: {list(merged.columns)}", file=sys.stderr)
     
@@ -92,15 +92,27 @@ def calculate_scores(submission_path: Path):
         print(f"DEBUG: Test labels graph_index sample: {gt_df['graph_index'].head()}", file=sys.stderr)
         raise ValueError("No matching graph_index values found between submission and test labels")
     
-    # Use the suffixed column names
-    y_pred_col = f"{pred_col}_pred"
-    y_true_col = f"{truth_col}_true"
-    
-    print(f"DEBUG: Using prediction column: {y_pred_col}", file=sys.stderr)
-    print(f"DEBUG: Using ground truth column: {y_true_col}", file=sys.stderr)
-    
-    y_pred = merged[y_pred_col]
-    y_true = merged[y_true_col]
+    # Determine the actual prediction and truth columns in merged dataframe
+    # Handle cases where column names might be the same (gets suffixed with _x, _y) or different
+    if pred_col in merged.columns and truth_col in merged.columns and pred_col != truth_col:
+        # Different column names, no suffix added
+        y_pred = merged[pred_col]
+        y_true = merged[truth_col]
+        print(f"DEBUG: Using columns directly - pred: {pred_col}, truth: {truth_col}", file=sys.stderr)
+    elif f"{pred_col}_x" in merged.columns and f"{truth_col}_y" in merged.columns:
+        # Same column names, pandas added _x and _y suffixes
+        y_pred = merged[f"{pred_col}_x"]
+        y_true = merged[f"{truth_col}_y"]
+        print(f"DEBUG: Using suffixed columns - pred: {pred_col}_x, truth: {truth_col}_y", file=sys.stderr)
+    else:
+        # Fallback: try to find any column that isn't graph_index
+        non_key_cols = [col for col in merged.columns if col != 'graph_index']
+        if len(non_key_cols) >= 2:
+            y_pred = merged[non_key_cols[0]]
+            y_true = merged[non_key_cols[1]]
+            print(f"DEBUG: Using fallback - pred: {non_key_cols[0]}, truth: {non_key_cols[1]}", file=sys.stderr)
+        else:
+            raise KeyError(f"Cannot find prediction/truth columns. Available: {list(merged.columns)}")
     
     print(f"DEBUG: y_pred sample: {y_pred.head().tolist()}", file=sys.stderr)
     print(f"DEBUG: y_true sample: {y_true.head().tolist()}", file=sys.stderr)
