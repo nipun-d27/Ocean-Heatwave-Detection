@@ -1,6 +1,5 @@
 name: Process Secure Submission
 
-# Trigger on PUSH to main, PR events, or manual run
 on:
   push:
     branches:
@@ -30,159 +29,90 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.inputs.pr_number != '' && format('refs/pull/{0}/head', github.event.inputs.pr_number) || github.head_ref }}
 
-      # 2️⃣ Debug - Show git status and file versions
-      - name: Debug - Show git status and file versions
+      # 2️⃣ Clean duplicate calculate_scores.py (if exists)
+      - name: Clean duplicate calculate_scores.py
         run: |
-          echo "=== GIT STATUS ==="
-          git branch
-          echo "Current commit:"
-          git log -1 --pretty=format:"%h - %s - %cd"
-          echo ""
-          echo "=== FILES CHANGED IN THIS COMMIT ==="
-          git show --name-only
-          echo ""
-          echo "=== CHECKING CALCULATE_SCORES.PY ==="
-          if [ -f "leaderboard/calculate_scores.py" ]; then
-            echo "File exists:"
-            ls -la leaderboard/calculate_scores.py
-            echo "File size and line count:"
-            wc -l leaderboard/calculate_scores.py
-            echo "=== FIRST 30 LINES OF CALCULATE_SCORES.PY ==="
-            head -30 leaderboard/calculate_scores.py
-            echo "=== LINE 20 EXACTLY ==="
-            sed -n '20p' leaderboard/calculate_scores.py
-          else
-            echo "ERROR: calculate_scores.py not found!"
-          fi
-
-      # 3️⃣ Clean up duplicate calculate_scores.py files
-      - name: Clean up duplicate calculate_scores.py
-        run: |
-          echo "=== CHECKING FOR DUPLICATE CALCULATE_SCORES.PY FILES ==="
-          find . -name "calculate_scores.py" -type f
-          echo ""
-          echo "=== REMOVING OLD VERSION FROM SCRIPTS FOLDER IF IT EXISTS ==="
+          echo "Checking for duplicate scoring scripts..."
           if [ -f "scripts/leaderboard/calculate_scores.py" ]; then
-            echo "Found old file at scripts/leaderboard/calculate_scores.py"
-            echo "Content of old file (first 5 lines):"
-            head -5 scripts/leaderboard/calculate_scores.py
-            echo ""
             rm scripts/leaderboard/calculate_scores.py
-            echo "✅ Removed old file from scripts/leaderboard/"
-          else
-            echo "✅ No duplicate found in scripts/leaderboard/"
-          fi
-          
-          echo ""
-          echo "=== CHECKING FOR ANY OTHER CALCULATE_SCORES.PY FILES ==="
-          find . -path "./.git" -prune -o -name "calculate_scores.py" -type f -print
-          
-          echo ""
-          echo "=== VERIFYING CORRECT FILE IN LEADERBOARD FOLDER ==="
-          if [ -f "leaderboard/calculate_scores.py" ]; then
-            echo "Correct file at leaderboard/calculate_scores.py:"
-            ls -la leaderboard/calculate_scores.py
-            echo "Line count: $(wc -l < leaderboard/calculate_scores.py)"
-            echo "First 5 lines:"
-            head -5 leaderboard/calculate_scores.py
-          else
-            echo "❌ ERROR: leaderboard/calculate_scores.py not found!"
+            echo "Removed old duplicate file."
           fi
 
-      # 4️⃣ Setup Python
+      # 3️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      # 5️⃣ Install dependencies
+      # 4️⃣ Install dependencies
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install --upgrade cryptography
+          pip install -r requirements.txt
+          pip install --upgrade cryptography
 
-      # 6️⃣ Verify cryptography
+      # 5️⃣ Verify cryptography (lightweight check)
       - name: Verify cryptography
         run: |
-          python -m pip show cryptography
-          python -c "from cryptography.hazmat.primitives import serialization, hashes; print('cryptography OK')"
+          python -c "from cryptography.hazmat.primitives import serialization; print('cryptography OK')"
 
-      # 7️⃣ Debug and ensure metadata.json exists
-      - name: Debug and create metadata.json
+      # 6️⃣ Ensure metadata.json exists (SAFE: no overwrite)
+      - name: Ensure metadata.json exists
         run: |
-          echo "=== DEBUGGING SUBMISSIONS FOLDER ==="
-          pwd
-          ls -la
-          echo "=== CHECKING SUBMISSIONS DIRECTORY ==="
+          echo "Checking metadata files..."
+
           if [ -d "submissions" ]; then
-            echo "Submissions directory exists"
-            ls -la submissions/
-            echo "=== CHECKING EACH TEAM FOLDER ==="
             for team_dir in submissions/*/ ; do
               if [ -d "$team_dir" ]; then
-                echo "Processing team: $team_dir"
-                ls -la "$team_dir"
                 
-                # FORCE CREATE metadata.json (overwrite if exists)
-                echo "Creating/overwriting metadata.json in $team_dir"
-                echo '{
-                  "team_name": "'$(basename $team_dir)'",
-                  "submission_time": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
-                  "description": "Force created metadata for debugging"
-                }' > "${team_dir}metadata.json"
-                
-                echo "Metadata.json created:"
-                cat "${team_dir}metadata.json"
-                echo ""
-                
-                # Set permissions
-                chmod 644 "${team_dir}metadata.json"
+                if [ ! -f "${team_dir}metadata.json" ]; then
+                  echo "Creating metadata.json for $(basename $team_dir)"
+                  echo '{
+                    "team_name": "'$(basename $team_dir)'",
+                    "submission_time": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                    "description": "Auto-generated metadata"
+                  }' > "${team_dir}metadata.json"
+
+                  chmod 644 "${team_dir}metadata.json"
+                fi
+
               fi
             done
           else
-            echo "No submissions directory found"
+            echo "No submissions folder found. Creating one..."
             mkdir -p submissions
           fi
-          echo "=== FINAL SUBMISSIONS STRUCTURE ==="
-          find submissions -type f -name "*.json" -o -name "*.csv" -o -name "*.enc" | sort
 
-      # 8️⃣ List submissions folder
-      - name: List submissions folder
-        run: |
-          echo "DEBUG: Listing submissions folder contents:"
-          ls -R submissions || echo "No submissions found"
-
-      # 9️⃣ Create test labels file and run submission processing
+      # 7️⃣ Decrypt, score, and update leaderboard
       - name: Decrypt, Score, and Update Leaderboard
         env:
           SUBMISSION_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           TEST_LABELS_CONTENT: ${{ secrets.TEST_LABELS_CSV }}
         run: |
-          echo "Creating test labels file from secret..."
+          echo "Preparing evaluation data..."
+
           mkdir -p data
           echo "$TEST_LABELS_CONTENT" > data/test_labels_hidden.csv
-          echo "Test labels file created (first 5 lines):"
-          head -5 data/test_labels_hidden.csv
-          
-          # Set the environment variable to the file path
+
           export TEST_LABELS_CSV=data/test_labels_hidden.csv
-          
-          echo "Decrypting and scoring submissions..."
+
+          echo "Running submission processing..."
           python .github/scripts/process_submission.py
 
-      # 🔟 Commit and push any changes only for pushes to main (with pull to avoid rejection)
+      # 8️⃣ Commit and push changes (ONLY on main push)
       - name: Commit and Push Changes (Main branch only)
         if: github.event_name == 'push'
         run: |
           git config user.name "SubmissionBot"
           git config user.email "bot@noreply.github.com"
+
           git add .
+
           if ! git diff-index --quiet HEAD; then
             git commit -m "Processed new submission [skip ci]"
-            # Pull with auto-resolution (favor remote changes)
             git pull --no-rebase -X theirs origin main
             git push
+            echo "Changes pushed successfully."
           else
             echo "No changes to commit."
           fi
