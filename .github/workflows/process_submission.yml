@@ -54,11 +54,11 @@ jobs:
           if [ -d "submissions" ]; then
             for team_dir in submissions/*/ ; do
               if [ -d "$team_dir" ] && [ ! -f "${team_dir}metadata.json" ]; then
-                echo '{
-                  "team_name": "'$(basename $team_dir)'",
-                  "submission_time": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
-                  "description": "Auto-generated metadata"
-                }' > "${team_dir}metadata.json"
+                #echo '{
+                  #"team_name": "'$(basename $team_dir)'",
+                  #"submission_time": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                  #"description": "Auto-generated metadata"
+                #}' > "${team_dir}metadata.json"
                 chmod 644 "${team_dir}metadata.json"
               fi
             done
