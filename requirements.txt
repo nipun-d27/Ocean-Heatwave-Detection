@@ -1,7 +1,5 @@
-torch
-torch-geometric
-networkx
+sklearn
 numpy
 pandas
 scikit-learn
-python-dotenv
+matplotlib
