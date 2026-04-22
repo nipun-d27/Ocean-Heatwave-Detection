@@ -2,65 +2,94 @@ import pandas as pd
 from pathlib import Path
 from sklearn.metrics import accuracy_score
 
-# Paths
-repo_root = Path(__file__).parent
+# ───────────────────────────────────────────────
+# HANDLE PATH (works in Jupyter + script)
+# ───────────────────────────────────────────────
+try:
+    repo_root = Path(__file__).parent
+except NameError:
+    repo_root = Path().resolve()
+
 submissions_dir = repo_root / "submissions"
 labels_file = repo_root / "data" / "test_labels.csv"
 leaderboard_file = repo_root / "leaderboard.csv"
 
-def main():
-    print("🏆 Running Leaderboard System...\n")
+print(f"📂 Repo path: {repo_root}")
 
-    # Load true labels
-    if not labels_file.exists():
-        print("❌ test_labels.csv not found")
-        return
+# ───────────────────────────────────────────────
+# LOAD TRUE LABELS
+# ───────────────────────────────────────────────
+if not labels_file.exists():
+    print("❌ test_labels.csv not found!")
+    print(f"Expected at: {labels_file}")
+    
+    # Create empty leaderboard
+    pd.DataFrame(columns=["rank", "team_name", "accuracy"]).to_csv(leaderboard_file, index=False)
+    print("⚠️ Empty leaderboard.csv created")
+    exit()
 
-    y_true = pd.read_csv(labels_file)["Marine Heatwave"]
+y_true = pd.read_csv(labels_file)["Marine Heatwave"]
 
-    results = []
+# ───────────────────────────────────────────────
+# PROCESS SUBMISSIONS
+# ───────────────────────────────────────────────
+results = []
 
-    # Loop through submissions
-    for file in submissions_dir.glob("*.csv"):
-        print(f"Processing {file.name}")
+if not submissions_dir.exists():
+    print("⚠️ No submissions folder found")
+    submissions_dir.mkdir(exist_ok=True)
 
-        try:
-            df = pd.read_csv(file)
+files = list(submissions_dir.glob("*.csv"))
 
-            if "prediction" not in df.columns:
-                print(f"⚠️ Skipping {file.name} (no prediction column)")
-                continue
+if not files:
+    print("⚠️ No submission files found")
 
-            y_pred = df["prediction"]
+for file in files:
+    print(f"📄 Processing: {file.name}")
 
-            # Calculate accuracy
-            acc = accuracy_score(y_true, y_pred)
+    try:
+        df = pd.read_csv(file)
 
-            results.append({
-                "team_name": file.stem,
-                "accuracy": round(acc * 100, 2)
-            })
+        # Check column
+        if "prediction" not in df.columns:
+            print(f"⚠️ Skipping {file.name} (no 'prediction' column)")
+            continue
 
-        except Exception as e:
-            print(f"❌ Error in {file.name}: {e}")
+        y_pred = df["prediction"]
 
-    # Create leaderboard
+        # Check length match
+        if len(y_pred) != len(y_true):
+            print(f"⚠️ Skipping {file.name} (length mismatch)")
+            continue
+
+        acc = accuracy_score(y_true, y_pred)
+
+        results.append({
+            "team_name": file.stem,
+            "accuracy": round(acc * 100, 2)
+        })
+
+    except Exception as e:
+        print(f"❌ Error in {file.name}: {e}")
+
+# ───────────────────────────────────────────────
+# CREATE LEADERBOARD
+# ───────────────────────────────────────────────
+if results:
     leaderboard = pd.DataFrame(results)
-
-    if leaderboard.empty:
-        print("No valid submissions found")
-        return
-
-    # Sort by accuracy
     leaderboard = leaderboard.sort_values(by="accuracy", ascending=False)
     leaderboard.insert(0, "rank", range(1, len(leaderboard) + 1))
+else:
+    print("⚠️ No valid submissions — creating empty leaderboard")
+    leaderboard = pd.DataFrame(columns=["rank", "team_name", "accuracy"])
 
-    # Save leaderboard
-    leaderboard.to_csv(leaderboard_file, index=False)
+# ───────────────────────────────────────────────
+# SAVE FILE
+# ───────────────────────────────────────────────
+leaderboard.to_csv(leaderboard_file, index=False)
 
-    print("\n🏆 Leaderboard Updated!\n")
-    print(leaderboard.to_string(index=False))
+print("\n🏆 Leaderboard created successfully!")
+print(f"📁 Saved at: {leaderboard_file.resolve()}")
 
-
-if __name__ == "__main__":
-    main()
+print("\n📊 Leaderboard Preview:")
+print(leaderboard.to_string(index=False))
