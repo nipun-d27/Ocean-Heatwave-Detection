@@ -1,0 +1,38 @@
+name: Update Leaderboard
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt || true
+
+    - name: Run evaluation
+      run: python evaluate.py
+
+    - name: Update leaderboard
+      run: |
+        name=$(jq -r '.name' result.json)
+        acc=$(jq -r '.accuracy' result.json)
+        echo "$name,$acc" >> leaderboard.csv
+
+    - name: Commit changes
+      run: |
+        git config --global user.name "github-actions"
+        git config --global user.email "actions@github.com"
+        git add leaderboard.csv
+        git commit -m "Update leaderboard" || echo "No changes"
+        git push
