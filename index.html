@@ -2,42 +2,113 @@
 <html>
 <head>
   <title>Leaderboard</title>
+
   <style>
-    body { font-family: Arial; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-    th { background-color: #f2f2f2; }
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f5f7fa;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .card-container {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      width: 30%;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background: #eee;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    .medal {
+      font-size: 20px;
+    }
   </style>
 </head>
 
 <body>
 
-<h1>🏆 Leaderboard</h1>
+<h1>🏆 Ocean Heatwave Challenge</h1>
+
+<div class="card-container">
+  <div class="card" id="total"></div>
+  <div class="card" id="best"></div>
+  <div class="card" id="avg"></div>
+</div>
 
 <table id="leaderboard">
   <tr>
     <th>Rank</th>
     <th>Name</th>
+    <th>F1 Score</th>
     <th>Accuracy</th>
+    <th>PR</th>
   </tr>
 </table>
 
 <script>
 fetch('leaderboard.csv')
-  .then(response => response.text())
+  .then(res => res.text())
   .then(data => {
-    const rows = data.split('\n').slice(1);
+
+    const rows = data.split('\n').slice(1).filter(r => r.trim() !== '');
+    let parsed = rows.map(r => {
+      const [name, acc, f1, pr] = r.split(',');
+      return {name, acc: parseFloat(acc), f1: parseFloat(f1), pr};
+    });
+
+    // Sort by F1
+    parsed.sort((a,b) => b.f1 - a.f1);
+
+    // Stats
+    document.getElementById("total").innerHTML = `<h3>${parsed.length}</h3><p>Teams</p>`;
+    document.getElementById("best").innerHTML = `<h3>${parsed[0].f1}</h3><p>Best F1</p>`;
+    document.getElementById("avg").innerHTML = `<h3>${(parsed.reduce((s,x)=>s+x.f1,0)/parsed.length).toFixed(3)}</h3><p>Avg F1</p>`;
+
     const table = document.getElementById("leaderboard");
 
-    rows.forEach((row, index) => {
-      if(row.trim() === "") return;
-      const cols = row.split(',');
+    parsed.forEach((row, index) => {
+      let tr = table.insertRow();
 
-      let newRow = table.insertRow();
-      newRow.insertCell(0).innerText = index + 1;
-      newRow.insertCell(1).innerText = cols[0];
-      newRow.insertCell(2).innerText = cols[1];
+      let medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index+1;
+
+      tr.insertCell(0).innerText = medal;
+      tr.insertCell(1).innerText = row.name;
+      tr.insertCell(2).innerText = row.f1;
+      tr.insertCell(3).innerText = row.acc;
+      tr.insertCell(4).innerHTML = `<a href="#">${row.pr}</a>`;
     });
+
   });
 </script>
 
